@@ -7,7 +7,7 @@
 ## 🌟 核心特性
 * **多语言支持**：核心逻辑由 C++11 (`interface/pose_vector_math.hpp`) 实现，并提供完全一致的 Python  (`interface/pose_vector_math.py`) 实现。
 * **全场景覆盖**：涵盖“眼在手外” (Eye-to-Hand) 与 “眼在手上” (Eye-in-Hand) 两种主流标定模型的链式变换。
-* **数学严谨**：默认采用 **XYZ + 外旋** 约定 ($R = R_z R_y R_x$)，详情参考内部文档。
+* **数学严谨**：默认采用 **XYZ + 外旋** 约定 ($`R = R_z R_y R_x`$)，详情参考内部文档。
 * **零耦合设计**：C++ 部分为 Header-only 库设计，依赖极简，仅需 Eigen3。
 
 ---
@@ -19,15 +19,15 @@
 
 
 
-> 下图中的 ${ }^{c}\mathrm{~T}_{t}$ 代表 **目标物体在相机坐标系的表达**，如代码中使用的 `target_in_camera`，其它符号则同理
+> 下图中的 $`{ }^{c}\mathrm{~T}_{t}`$ 代表 **目标物体在相机坐标系的表达**，如代码中使用的 `target_in_camera`，其它符号则同理
 
 <img src="assets/images/eth_setup.png" alt="ETH 数据流示意" style="width:50%;">
 
 其链式关系如下，与 `main.cpp` 中 `pose3dMultiply(camera_in_base, target_in_camera)` 一致：
 
-$$
+```math
 T_{\mathrm{base}}^{\mathrm{target}} = T_{\mathrm{base}}^{\mathrm{cam}} T_{\mathrm{cam}}^{\mathrm{target}}
-$$
+```
 
 
 ```mermaid
@@ -43,17 +43,18 @@ flowchart LR
 
 
 
-> 下图中的 ${ }^{c}\mathrm{~T}_{t}$ 代表 **目标物体在相机坐标系的表达**，如代码中使用的 `target_in_camera`，其它符号则同理
+> 下图中的 $`{ }^{c}\mathrm{~T}_{t}`$ 代表 **目标物体在相机坐标系的表达**，如代码中使用的 `target_in_camera`，其它符号则同理
 
 <img src="assets/images/eih_setup.png" alt="EIH 数据流示意" style="width:50%;">
 
 
 
 其链式关系如下，与  `main.cpp` 中两次 `pose3dMultiply` 一致：
-$$
+
+```math
 T_{\mathrm{flange}}^{\mathrm{target}} = T_{\mathrm{flange}}^{\mathrm{cam}} T_{\mathrm{cam}}^{\mathrm{target}},\qquad
 T_{\mathrm{base}}^{\mathrm{target}} = T_{\mathrm{base}}^{\mathrm{flange}} T_{\mathrm{flange}}^{\mathrm{target}}
-$$
+```
 
 
 ```mermaid
