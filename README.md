@@ -15,7 +15,7 @@
 ## 🛠 变换场景说明
 
 ### 1. ETH（Eye-to-Hand，眼在手外）
-相机固定于基座外部环境。通过已知相机在基座下的位姿（通过**ETH**标定得出，参考 [hand_eyes_calibration](https://www.google.com/url?sa=E&source=gmail&q=https://github.com/zhangnatha/hand_eyes_calibration) ），将**相机坐标系下目标物位姿**转换至机器人**基座坐标系**。
+相机固定于基座外部环境。通过已知相机在基座下的位姿（通过**ETH**标定得出，参考 [hand_eyes_calibration](https://github.com/zhangnatha/hand_eyes_calibration) ），将**相机坐标系下目标物位姿**转换至机器人**基座坐标系**。
 
 
 
@@ -25,7 +25,10 @@
 
 其链式关系如下，与 `main.cpp` 中 `pose3dMultiply(camera_in_base, target_in_camera)` 一致：
 
-$$T_{\mathrm{base}}^{\mathrm{target}} = T_{\mathrm{base}}^{\mathrm{cam}} T_{\mathrm{cam}}^{\mathrm{target}}$$
+$$
+T_{\mathrm{base}}^{\mathrm{target}} = T_{\mathrm{base}}^{\mathrm{cam}} T_{\mathrm{cam}}^{\mathrm{target}}
+$$
+
 
 ```mermaid
 flowchart LR
@@ -36,7 +39,7 @@ flowchart LR
 
 ### 2. EIH（Eye-in-Hand，眼在手上）
 
-**相机**安装在**末端法兰**上随动。通过链式法则通过已知**相机在法兰坐标系下的位姿**（通过**EIH**标定得出，参考 [hand_eyes_calibration](https://www.google.com/url?sa=E&source=gmail&q=https://github.com/zhangnatha/hand_eyes_calibration) ），将**相机坐标系下目标物位姿**转换至**法兰坐标系**，再转换至**基座坐标系**。
+**相机**安装在**末端法兰**上随动。通过链式法则通过已知**相机在法兰坐标系下的位姿**（通过**EIH**标定得出，参考 [hand_eyes_calibration](https://github.com/zhangnatha/hand_eyes_calibration) ），将**相机坐标系下目标物位姿**转换至**法兰坐标系**，再转换至**基座坐标系**。
 
 
 
@@ -93,4 +96,4 @@ python3 main.py --verify
 
 ## 📖 详细文档
 
-关于数学约定、齐次变换公式及 API 的详细定义，请参阅 [assets/API.md](https://www.google.com/search?q=assets/API.md)。
+关于数学约定、齐次变换公式及 API 的详细定义，请参阅 [assets/API.md](assets/API.md)。
