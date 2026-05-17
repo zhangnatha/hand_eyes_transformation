@@ -40,7 +40,7 @@
 namespace pose_vector_math {
 
 namespace custom {
-inline constexpr double pi() { return 3.14159265358979323846; }
+inline constexpr double _pi() { return 3.14159265358979323846; }
 }  // namespace custom
 
 /** @brief 旋转参考坐标系类型 */
@@ -73,203 +73,241 @@ using Vector3D  = Eigen::Vector3d;                      ///< xyz 三元双精度
 
 /**
  * @brief 生成绕单一轴旋转的矩阵
- * @param[in] axis 轴序字符，'X'、'Y'、'Z'。
+ * @param[in] rotation_axis 轴序字符，'X'、'Y'、'Z'。
  * @param[in] angle_rad 旋转角度，弧度。
  * @return 3×3 旋转矩阵。
  */
-inline Eigen::Matrix3d getBaseRotMatrix(char axis, double angle_rad) {
-    if (axis == 'X') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitX()).toRotationMatrix();
-    if (axis == 'Y') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitY()).toRotationMatrix();
-    if (axis == 'Z') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitZ()).toRotationMatrix();
+inline Eigen::Matrix3d _getBaseRotMatrix(char rotation_axis, double angle_rad) {
+    if (rotation_axis == 'X') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitX()).toRotationMatrix();
+    if (rotation_axis == 'Y') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitY()).toRotationMatrix();
+    if (rotation_axis == 'Z') return Eigen::AngleAxisd(angle_rad, Eigen::Vector3d::UnitZ()).toRotationMatrix();
     return Eigen::Matrix3d::Identity();
 }
 
 /**
  * @brief 获取 RPYType 对应的字符串描述
- * @param[in] type 轴序枚举。
+ * @param[in] rpy_type 轴序枚举。
  * @return 字符串描述。
  */
-inline std::string getRPYOrderStr(RPYType type) {
+inline std::string _getRpyOrderStr(RPYType rpy_type) {
     const char* names[] = {"XYZ", "XZY", "YXZ", "YZX", "ZXY", "ZYX", 
                            "XYX", "XZX", "YXY", "YZY", "ZXZ", "ZYZ"};
-    return names[static_cast<int>(type)];
+    return names[static_cast<int>(rpy_type)];
 }
 
 /**
  * @brief 欧拉角 (度) → 旋转矩阵，XYZ + EXTRINSIC，\f$R = R_z R_y R_x\f$。
- * @param[in] r1_deg,r2_deg,r3_deg 欧拉角分量 (度)。
+ * @param[in] rx_deg,ry_deg,rz_deg 欧拉角分量 (度)。
  * @param[in] rpy_type 轴序。
- * @param[in] ref_type 内旋或外旋。
+ * @param[in] reference_type 内旋或外旋。
  * @return 3×3 旋转矩阵。
  */
 inline Eigen::Matrix3d rpyDegToRotationMatrix(
-    double r1_deg, double r2_deg, double r3_deg,
+    double rx_deg, double ry_deg, double rz_deg,
     RPYType rpy_type = RPYType::XYZ,
-    ReferenceType ref_type = ReferenceType::EXTRINSIC)
+    ReferenceType reference_type = ReferenceType::EXTRINSIC)
 {
-    Vector3D rads = Vector3D(r1_deg, r2_deg, r3_deg) * custom::pi() / 180.0;
-    std::string order = getRPYOrderStr(rpy_type);
+    Vector3D rads = Vector3D(rx_deg, ry_deg, rz_deg) * custom::_pi() / 180.0;
+    std::string order = _getRpyOrderStr(rpy_type);
 
-    Eigen::Matrix3d m1 = getBaseRotMatrix(order[0], rads[0]);
-    Eigen::Matrix3d m2 = getBaseRotMatrix(order[1], rads[1]);
-    Eigen::Matrix3d m3 = getBaseRotMatrix(order[2], rads[2]);
+    Eigen::Matrix3d first_rotation = _getBaseRotMatrix(order[0], rads[0]);
+    Eigen::Matrix3d second_rotation = _getBaseRotMatrix(order[1], rads[1]);
+    Eigen::Matrix3d third_rotation = _getBaseRotMatrix(order[2], rads[2]);
 
-    if (ref_type == ReferenceType::INTRINSIC) {
-        return m1 * m2 * m3; // 内旋：R = R1 * R2 * R3
+    if (reference_type == ReferenceType::INTRINSIC) {
+        return first_rotation * second_rotation * third_rotation; // 内旋：R = R1 * R2 * R3
     } else {
-        return m3 * m2 * m1; // 外旋：R = R3 * R2 * R1
+        return third_rotation * second_rotation * first_rotation; // 外旋：R = R3 * R2 * R1
     }
 }
 
 /**
  * @brief 旋转矩阵 → 欧拉角 (度)，XYZ + EXTRINSIC，\f$R = R_z R_y R_x\f$。
- * @param[in] r 3×3 旋转矩阵。
+ * @param[in] rotation_matrix 3×3 旋转矩阵。
  * @return 欧拉角 (rx, ry, rz)，度。
  */
-inline Vector3D rotationMatrixToRpyDeg(const Eigen::Matrix3d& r) {
+inline Vector3D rotationMatrixToRpyDeg(const Eigen::Matrix3d& rotation_matrix) {
     const double zer = 1e-8;
-    double ry = std::atan2(-r(2, 0), std::sqrt(r(0, 0) * r(0, 0) + r(1, 0) * r(1, 0)));
+    double ry = std::atan2(
+        -rotation_matrix(2, 0),
+        std::sqrt(rotation_matrix(0, 0) * rotation_matrix(0, 0) + rotation_matrix(1, 0) * rotation_matrix(1, 0)));
     double rx, rz;
-    if (std::abs(ry - custom::pi() / 2.0) < zer) {
-        ry = custom::pi() / 2.0;
-        rx = std::atan2(r(0, 1), r(1, 1));
+    if (std::abs(ry - custom::_pi() / 2.0) < zer) {
+        ry = custom::_pi() / 2.0;
+        rx = std::atan2(rotation_matrix(0, 1), rotation_matrix(1, 1));
         rz = 0;
-    } else if (std::abs(ry + custom::pi() / 2.0) < zer) {
-        ry = -custom::pi() / 2.0;
-        rx = -std::atan2(r(0, 1), r(1, 1));
+    } else if (std::abs(ry + custom::_pi() / 2.0) < zer) {
+        ry = -custom::_pi() / 2.0;
+        rx = -std::atan2(rotation_matrix(0, 1), rotation_matrix(1, 1));
         rz = 0;
     } else {
         const double c = std::cos(ry);
-        rz = std::atan2(r(1, 0) / c, r(0, 0) / c);
-        rx = std::atan2(r(2, 1) / c, r(2, 2) / c);
+        rz = std::atan2(rotation_matrix(1, 0) / c, rotation_matrix(0, 0) / c);
+        rx = std::atan2(rotation_matrix(2, 1) / c, rotation_matrix(2, 2) / c);
     }
-    return Vector3D(rx, ry, rz) * 180.0 / custom::pi();
+    return Vector3D(rx, ry, rz) * 180.0 / custom::_pi();
 }
 
 /**
- * @brief 将位姿转为 4×4 齐次变换矩阵。
- * @param[in] p 输入位姿，类型为 Pose6D。
+ * @brief 将 6D 位姿转换为 4×4 齐次变换矩阵。
+ * @param[in] pose6d 输入位姿 [x, y, z, rx, ry, rz]，角度为度。
  * @return 齐次变换矩阵。
  */
-inline Eigen::Matrix4d pose3dToMat4(const Pose6D& p) {
-    Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
-    t.block<3, 3>(0, 0) = rpyDegToRotationMatrix(p[3], p[4], p[5]);
-    t.block<3, 1>(0, 3) = Vector3D(p[0], p[1], p[2]);
-    return t;
+inline Eigen::Matrix4d pose6dToHomogeneous(const Pose6D& pose6d) {
+    const double x = pose6d[0];
+    const double y = pose6d[1];
+    const double z = pose6d[2];
+    const double rx = pose6d[3];
+    const double ry = pose6d[4];
+    const double rz = pose6d[5];
+
+    Eigen::Matrix4d homogeneous = Eigen::Matrix4d::Identity();
+    homogeneous.block<3, 3>(0, 0) = rpyDegToRotationMatrix(rx, ry, rz);
+    homogeneous.block<3, 1>(0, 3) = Vector3D(x, y, z);
+    return homogeneous;
 }
 
 /**
- * @brief 将 4×4 齐次矩阵转为位姿。
- * @param[in] m 齐次变换矩阵。
- * @return 位姿 Pose6D。
+ * @brief 将 4×4 齐次变换矩阵转换为 6D 位姿。
+ * @param[in] homogeneous 齐次变换矩阵。
+ * @return 位姿 [x, y, z, rx, ry, rz]，角度为度。
  */
-inline Pose6D mat4ToPose(const Eigen::Matrix4d& m) {
-    const Vector3D rpy = rotationMatrixToRpyDeg(m.block<3, 3>(0, 0));
-    return Pose6D{{m(0, 3), m(1, 3), m(2, 3), rpy[0], rpy[1], rpy[2]}};
+inline Pose6D homogeneousToPose6d(const Eigen::Matrix4d& homogeneous) {
+    const Vector3D translation = homogeneous.block<3, 1>(0, 3);
+    const Vector3D euler_angles = rotationMatrixToRpyDeg(homogeneous.block<3, 3>(0, 0));
+    return Pose6D{{
+        translation[0], translation[1], translation[2],
+        euler_angles[0], euler_angles[1], euler_angles[2]
+    }};
 }
 
 /**
- * @brief 坐标变换：位姿 p1 经 p2 变换得到新位姿，等价于 \f$T_3 = T_1 T_2\f$。
- * @param[in] a 第一个位姿（左侧），类型为 Pose6D。
- * @param[in] b 第二个位姿（右侧），类型为 Pose6D。
- * @return 复合后的位姿，类型为 Pose6D。
+ * @brief 最小正向乘运算：计算 target 在 B 坐标系下的位姿。
+ * @details 数学关系：\f$T_{target2B}=T_{A2B}T_{target2A}\f$。
+ * @param[in] pose_a_in_b A 坐标系相对于 B 坐标系的 6D 位姿。
+ * @param[in] pose_target_in_a target 在 A 坐标系下的 6D 位姿。
+ * @return target 在 B 坐标系下的 6D 位姿。
  */
-inline Pose6D pose3dMultiply(const Pose6D& a, const Pose6D& b) {
-    return mat4ToPose(pose3dToMat4(a) * pose3dToMat4(b));
+inline Pose6D pose3dMultiply(
+    const Pose6D& pose_a_in_b,
+    const Pose6D& pose_target_in_a)
+{
+    Eigen::Matrix4d T_A2B = pose6dToHomogeneous(pose_a_in_b);
+    Eigen::Matrix4d T_target2A = pose6dToHomogeneous(pose_target_in_a);
+    Eigen::Matrix4d T_target2B = T_A2B * T_target2A;
+
+    return homogeneousToPose6d(T_target2B);
 }
 
 /**
- * @brief 坐标逆变换：求位姿的逆变换。
- * @param[in] p 输入位姿，类型为 Pose6D，姿态按 \f$R_z \cdot R_y \cdot R_x\f$ 与矩阵逆一致。
- * @return 逆变换位姿，类型为 Pose6D。
+ * @brief 将输入位姿的姿态重构为 Z 轴朝下，平移保持不变。
+ * @param[in] pose6d 输入位姿，类型为 Pose6D。
+ * @return Z 轴朝下后的 6D 位姿。
  */
-inline Pose6D pose3dInverse(const Pose6D& p) {
-    Eigen::Matrix4d t = pose3dToMat4(p);
-    Eigen::Matrix4d inv = Eigen::Matrix4d::Identity();
-    inv.block<3, 3>(0, 0) = t.block<3, 3>(0, 0).transpose();
-    inv.block<3, 1>(0, 3) = -inv.block<3, 3>(0, 0) * t.block<3, 1>(0, 3);
-    return mat4ToPose(inv);
+inline Pose6D pose3dForceZDown(const Pose6D& pose6d) {
+    Eigen::Matrix4d homogeneous = pose6dToHomogeneous(pose6d);
+    const Vector3D target_axis_x = homogeneous.block<3, 1>(0, 0);
+    const Vector3D target_new_z(0.0, 0.0, -1.0);
+    const Vector3D target_new_y = target_new_z.cross(target_axis_x);
+    const Vector3D target_new_x = target_new_y.cross(target_new_z);
+    homogeneous.block<3, 1>(0, 0) = target_new_x;
+    homogeneous.block<3, 1>(0, 1) = target_new_y;
+    homogeneous.block<3, 1>(0, 2) = target_new_z;
+    return homogeneousToPose6d(homogeneous);
+}
+
+/**
+ * @brief 最小逆运算：计算 B 坐标系相对于 A 坐标系的 6D 位姿。
+ * @details 数学关系：\f$T_{B2A}=T_{A2B}^{-1}\f$。
+ * @param[in] pose_a_in_b A 坐标系相对于 B 坐标系的 6D 位姿。
+ * @return B 坐标系相对于 A 坐标系的 6D 位姿。
+ */
+inline Pose6D pose3dInverse(const Pose6D& pose_a_in_b) {
+    const Eigen::Matrix4d T_A2B = pose6dToHomogeneous(pose_a_in_b);
+    const Eigen::Matrix4d T_B2A = T_A2B.inverse();
+    return homogeneousToPose6d(T_B2A);
 }
 
 /**
  * @brief 计算两点之间的空间距离，姿态不参与计算。
- * @param[in] a 点 1（取平移），类型为 Pose6D。
- * @param[in] b 点 2（取平移），类型为 Pose6D。
+ * @param[in] start_pose6d 点 1（取平移），类型为 Pose6D。
+ * @param[in] end_pose6d 点 2（取平移），类型为 Pose6D。
  * @return 欧氏距离。
  */
-inline double pose3dDistance(const Pose6D& a, const Pose6D& b) {
-    return (Vector3D(b[0], b[1], b[2]) - Vector3D(a[0], a[1], a[2])).norm();
+inline double pose3dDistance(const Pose6D& start_pose6d, const Pose6D& end_pose6d) {
+    return (Vector3D(end_pose6d[0], end_pose6d[1], end_pose6d[2]) -
+            Vector3D(start_pose6d[0], start_pose6d[1], start_pose6d[2])).norm();
 }
 
 /**
  * @brief 计算两个位姿之间的偏移量（相对位姿 \f$T_a^{-1} T_b\f$）。
- * @param[in] a 第一个位姿，类型为 Pose6D。
- * @param[in] b 第二个位姿，类型为 Pose6D。
+ * @param[in] pose_from_base_to_a 第一个位姿，类型为 Pose6D。
+ * @param[in] pose_from_base_to_b 第二个位姿，类型为 Pose6D。
  * @return 偏移位姿，类型为 Pose6D。
  */
-inline Pose6D pose3dOffset(const Pose6D& a, const Pose6D& b) {
-    return mat4ToPose(pose3dToMat4(a).inverse() * pose3dToMat4(b));
+inline Pose6D pose3dOffset(const Pose6D& pose_from_base_to_a, const Pose6D& pose_from_base_to_b) {
+    return pose3dMultiply(pose3dInverse(pose_from_base_to_a), pose_from_base_to_b);
 }
 
 /**
  * @brief 计算两个位姿之间的轴角差（相对旋转）。
- * @param[in] p1 第一个位姿，类型为 Pose6D。
- * @param[in] p2 第二个位姿，类型为 Pose6D。
+ * @param[in] pose_from_base_to_a 第一个位姿，类型为 Pose6D。
+ * @param[in] pose_from_base_to_b 第二个位姿，类型为 Pose6D。
  * @return 转角（度）与旋转轴单位向量，类型分别为 `double` 与 `Vector3D`。
  */
-inline std::pair<double, Vector3D> pose3dAngle(const Pose6D& p1, const Pose6D& p2) {
-    const Pose6D rel = pose3dOffset(p1, p2);
-    Eigen::Matrix3d r = rpyDegToRotationMatrix(rel[3], rel[4], rel[5]);
-    Eigen::AngleAxisd aa(r);
-    return std::make_pair(aa.angle() * 180.0 / custom::pi(), Vector3D(aa.axis()));
+inline std::pair<double, Vector3D> pose3dAngle(const Pose6D& pose_from_base_to_a, const Pose6D& pose_from_base_to_b) {
+    const Pose6D relative_pose_a_to_b = pose3dOffset(pose_from_base_to_a, pose_from_base_to_b);
+    Eigen::Matrix3d relative_rotation = rpyDegToRotationMatrix(relative_pose_a_to_b[3], relative_pose_a_to_b[4], relative_pose_a_to_b[5]);
+    Eigen::AngleAxisd axis_angle(relative_rotation);
+    return std::make_pair(axis_angle.angle() * 180.0 / custom::_pi(), Vector3D(axis_angle.axis()));
 }
 
 /**
  * @brief 获得输入位姿的平移向量。
- * @param[in] p 输入位姿，类型为 Pose6D。
+ * @param[in] pose6d 输入位姿，类型为 Pose6D。
  * @return 平移向量，类型为 Vector3D。
  */
-inline Vector3D pose3dGetTrans(const Pose6D& p) { return Vector3D(p[0], p[1], p[2]); }
+inline Vector3D pose3dGetTrans(const Pose6D& pose6d) { return Vector3D(pose6d[0], pose6d[1], pose6d[2]); }
 
 /**
  * @brief 获得输入位姿的欧拉角描述（度）。
- * @param[in] p 输入位姿，类型为 Pose6D。
+ * @param[in] pose6d 输入位姿，类型为 Pose6D。
  * @return 欧拉角 (rx, ry, rz)，类型为 Vector3D。
  */
-inline Vector3D pose3dGetRpy(const Pose6D& p) { return Vector3D(p[3], p[4], p[5]); }
+inline Vector3D pose3dGetRpy(const Pose6D& pose6d) { return Vector3D(pose6d[3], pose6d[4], pose6d[5]); }
 
 /**
  * @brief 获得输入向量的模长。
- * @param[in] v 输入三维向量，类型为 Vector3D。
+ * @param[in] vector3d 输入三维向量，类型为 Vector3D。
  * @return 模长。
  */
-inline double vector3dNorm(const Vector3D& v) { return v.norm(); }
+inline double vector3dNorm(const Vector3D& vector3d) { return vector3d.norm(); }
 
 /**
  * @brief 对输入的向量进行归一化。
- * @param[in] v 输入三维向量，类型为 Vector3D。
+ * @param[in] vector3d 输入三维向量，类型为 Vector3D。
  * @return 归一化后的向量，类型为 Vector3D。
  */
-inline Vector3D vector3dNormalized(const Vector3D& v) {
-    double n = v.norm();
-    return (n < 1e-15) ? v : (v / n);
+inline Vector3D vector3dNormalized(const Vector3D& vector3d) {
+    double vector_norm = vector3d.norm();
+    return (vector_norm < 1e-15) ? vector3d : (vector3d / vector_norm);
 }
 
 /**
  * @brief 两个向量叉乘。
- * @param[in] a 第一个向量，类型为 Vector3D。
- * @param[in] b 第二个向量，类型为 Vector3D。
+ * @param[in] left_vector 第一个向量，类型为 Vector3D。
+ * @param[in] right_vector 第二个向量，类型为 Vector3D。
  * @return 叉乘结果，类型为 Vector3D。
  */
-inline Vector3D vector3dCross(const Vector3D& a, const Vector3D& b) { return a.cross(b); }
+inline Vector3D vector3dCross(const Vector3D& left_vector, const Vector3D& right_vector) { return left_vector.cross(right_vector); }
 
 /**
  * @brief 两个向量点乘。
- * @param[in] a 第一个向量，类型为 Vector3D。
- * @param[in] b 第二个向量，类型为 Vector3D。
+ * @param[in] left_vector 第一个向量，类型为 Vector3D。
+ * @param[in] right_vector 第二个向量，类型为 Vector3D。
  * @return 点乘标量。
  */
-inline double vector3dDot(const Vector3D& a, const Vector3D& b) { return a.dot(b); }
+inline double vector3dDot(const Vector3D& left_vector, const Vector3D& right_vector) { return left_vector.dot(right_vector); }
 
 /**
  * @brief 欧拉角转旋转矩阵的列（局部系三轴在世界系下的方向）。
@@ -277,26 +315,26 @@ inline double vector3dDot(const Vector3D& a, const Vector3D& b) { return a.dot(b
  * @return 分别为 X、Y、Z 轴方向向量，类型均为 Vector3D。
  */
 inline std::array<Vector3D, 3> rpyToRot(const Vector3D& rpy_deg) {
-    Eigen::Matrix3d r = rpyDegToRotationMatrix(rpy_deg[0], rpy_deg[1], rpy_deg[2]);
-    return {r.col(0), r.col(1), r.col(2)};
+    Eigen::Matrix3d rotation_matrix = rpyDegToRotationMatrix(rpy_deg[0], rpy_deg[1], rpy_deg[2]);
+    return {rotation_matrix.col(0), rotation_matrix.col(1), rotation_matrix.col(2)};
 }
 
 /**
  * @brief 旋转矩阵转欧拉角描述（由三列轴向量构造旋转矩阵再逆解 RPY）。
- * @param[in] v1 X 轴向量，类型为 Vector3D。
- * @param[in] v2 Y 轴向量，类型为 Vector3D。
- * @param[in] v3 Z 轴向量，类型为 Vector3D。
+ * @param[in] x_axis X 轴向量，类型为 Vector3D。
+ * @param[in] y_axis Y 轴向量，类型为 Vector3D。
+ * @param[in] z_axis Z 轴向量，类型为 Vector3D。
  * @return 欧拉角 (度)，类型为 Vector3D。
  */
-inline Vector3D rotToRpy(const Vector3D& v1, const Vector3D& v2, const Vector3D& v3) {
-    Eigen::Matrix3d r;
-    r.col(0) = v1.normalized();
-    r.col(1) = v2.normalized();
-    r.col(2) = v3.normalized();
+inline Vector3D rotToRpy(const Vector3D& x_axis, const Vector3D& y_axis, const Vector3D& z_axis) {
+    Eigen::Matrix3d rotation_matrix;
+    rotation_matrix.col(0) = x_axis.normalized();
+    rotation_matrix.col(1) = y_axis.normalized();
+    rotation_matrix.col(2) = z_axis.normalized();
     // 简单校验正交性
-    if (std::abs(r.determinant() - 1.0) > 1e-3) 
-        throw std::invalid_argument("输入向量不满足正交规范约定");
-    return rotationMatrixToRpyDeg(r);
+    if (std::abs(rotation_matrix.determinant() - 1.0) > 1e-3)
+        throw std::invalid_argument("Input vectors do not satisfy the orthonormal rotation convention");
+    return rotationMatrixToRpyDeg(rotation_matrix);
 }
 
 /**
@@ -305,24 +343,22 @@ inline Vector3D rotToRpy(const Vector3D& v1, const Vector3D& v2, const Vector3D&
  * @return 单位旋转轴（Vector3D）与转角（度）。
  */
 inline std::pair<Vector3D, double> rpyToAxisAngle(const Vector3D& rpy_deg) {
-    Eigen::Matrix3d r = rpyDegToRotationMatrix(rpy_deg[0], rpy_deg[1], rpy_deg[2]);
-    Eigen::AngleAxisd aa(r);
-    return std::make_pair(Vector3D(aa.axis()), aa.angle() * 180.0 / custom::pi());
+    Eigen::Matrix3d rotation_matrix = rpyDegToRotationMatrix(rpy_deg[0], rpy_deg[1], rpy_deg[2]);
+    Eigen::AngleAxisd axis_angle(rotation_matrix);
+    return std::make_pair(Vector3D(axis_angle.axis()), axis_angle.angle() * 180.0 / custom::_pi());
 }
 
 /**
  * @brief 轴角转欧拉角。
- * @param[in] axis 旋转轴，类型为 Vector3D（将被单位化）。
+ * @param[in] rotation_axis 旋转轴，类型为 Vector3D（将被单位化）。
  * @param[in] angle_deg 旋转角（度）。
  * @return 欧拉角 (度)，类型为 Vector3D（RPY）。
  */
-inline Vector3D axisAngleToRpy(const Vector3D& axis, double angle_deg) {
-    if (axis.norm() < 1e-15) throw std::invalid_argument("转轴不能为零向量");
-    Eigen::Matrix3d r = Eigen::AngleAxisd(angle_deg * custom::pi() / 180.0, axis.normalized()).toRotationMatrix();
-    return rotationMatrixToRpyDeg(r);
+inline Vector3D axisAngleToRpy(const Vector3D& rotation_axis, double angle_deg) {
+    if (rotation_axis.norm() < 1e-15) throw std::invalid_argument("Rotation axis cannot be a zero vector");
+    Eigen::Matrix3d rotation_matrix =
+        Eigen::AngleAxisd(angle_deg * custom::_pi() / 180.0, rotation_axis.normalized()).toRotationMatrix();
+    return rotationMatrixToRpyDeg(rotation_matrix);
 }
-
-/** @brief 兼容性重定向。 */
-inline Eigen::Matrix4d poseToMat4(const Pose6D& p) { return pose3dToMat4(p); }
 
 } // namespace pose_vector_math

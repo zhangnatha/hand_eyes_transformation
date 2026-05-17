@@ -16,13 +16,13 @@ if(NOT TARGET Eigen3::Eigen)
             /usr/include/eigen3
             /usr/local/include/eigen3
             "${CMAKE_CURRENT_SOURCE_DIR}/third_party/eigen"
-        DOC "Eigen 头文件路径（例如 libeigen3-dev，或 -DEIGEN3_INCLUDE_DIR）"
+        DOC "Eigen include directory, for example libeigen3-dev or -DEIGEN3_INCLUDE_DIR"
     )
     if(NOT EIGEN3_INCLUDE_DIR)
         message(
             FATAL_ERROR
-                "未找到 Eigen3。请安装开发包（如 libeigen3-dev），或指定：\n"
-                "  cmake -DEIGEN3_INCLUDE_DIR=<eigen目录> ..."
+                "Eigen3 was not found. Install the development package, for example libeigen3-dev, or specify:\n"
+                "  cmake -DEIGEN3_INCLUDE_DIR=<eigen_dir> ..."
         )
     endif()
     add_library(Eigen3_Eigen INTERFACE IMPORTED)
