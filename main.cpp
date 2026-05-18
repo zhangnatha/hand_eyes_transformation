@@ -49,15 +49,17 @@ int main() {
     const Pose6D target_in_base_eih = pose3dMultiply(flange_in_base, target_in_flange);
     print_line6("target_in_base[EIH]", target_in_base_eih);
 
-    const Pose6D& pose_from_camera_to_target = target_in_camera;
+    const Pose6D pose_from_camera_to_target = pose3dInverse(target_in_camera);
     const Pose6D& pose_from_base_to_camera = camera_in_base;
 
-    std::cout << "\n--- pose API (target_in_camera, camera_in_base) ---\n";
-    print_line6("pose3dInverse(target_in_camera)", pose3dInverse(pose_from_camera_to_target));
+    std::cout << "\n--- pose API (pose3dInverse(target_in_camera), camera_in_base) ---\n";
+    print_line6("pose3dInverse(target_in_camera)", pose_from_camera_to_target);
+    const double pose_distance = pose3dDistance(pose_from_camera_to_target, pose_from_base_to_camera);
     std::cout << std::left << std::setw(label_width) << "pose3dDistance(target,camera)" << ": "
-              << std::fixed << std::setprecision(4) << pose3dDistance(pose_from_camera_to_target, pose_from_base_to_camera) << "\n"
+              << std::fixed << std::setprecision(4) << pose_distance << "\n"
               << std::defaultfloat;
-    print_line6("pose3dOffset(target,camera)", pose3dOffset(pose_from_camera_to_target, pose_from_base_to_camera));
+    const Pose6D pose_offset = pose3dOffset(pose_from_camera_to_target, pose_from_base_to_camera);
+    print_line6("pose3dOffset(target,camera)", pose_offset);
     double angle_deg = 0;
     Vector3D rotation_axis;
     std::tie(angle_deg, rotation_axis) = pose3dAngle(pose_from_camera_to_target, pose_from_base_to_camera);
@@ -65,11 +67,13 @@ int main() {
               << std::fixed << std::setprecision(4) << angle_deg << "° | "
               << rotation_axis[0] << "," << rotation_axis[1] << "," << rotation_axis[2]
               << "\n" << std::defaultfloat;
-    print_vec3("pose3dGetTrans(target)", pose3dGetTrans(pose_from_camera_to_target));
-    print_vec3("pose3dGetRpy(target)", pose3dGetRpy(pose_from_camera_to_target));
+    const Vector3D pose_trans = pose3dGetTrans(pose_from_camera_to_target);
+    print_vec3("pose3dGetTrans(target)", pose_trans);
+    const Vector3D pose_rpy = pose3dGetRpy(pose_from_camera_to_target);
+    print_vec3("pose3dGetRpy(target)", pose_rpy);
 
-    std::cout << "\n--- pose6dToHomogeneous(target_in_camera) ---\n";
-    print_line6("Input target_in_camera", pose_from_camera_to_target);
+    std::cout << "\n--- pose6dToHomogeneous(pose_from_camera_to_target) ---\n";
+    print_line6("Input pose_from_camera_to_target", pose_from_camera_to_target);
     const Eigen::Matrix4d T = pose6dToHomogeneous(pose_from_camera_to_target);
     std::cout << std::fixed << std::setprecision(8);
     for (int i = 0; i < 4; ++i) {
@@ -84,13 +88,17 @@ int main() {
     const Vector3D v1(566.417, 55.603, -78.360);
     print_vec3("v0", v0);
     print_vec3("v1", v1);
+    const double v0_norm = vector3dNorm(v0);
     std::cout << std::left << std::setw(label_width) << "vector3dNorm(v0)" << ": "
-              << std::fixed << std::setprecision(4) << vector3dNorm(v0) << "\n"
+              << std::fixed << std::setprecision(4) << v0_norm << "\n"
               << std::defaultfloat;
-    print_vec3("vector3dNormalized(v0)", vector3dNormalized(v0));
-    print_vec3("vector3dCross(v0,v1)", vector3dCross(v0, v1));
+    const Vector3D v0_normalized = vector3dNormalized(v0);
+    print_vec3("vector3dNormalized(v0)", v0_normalized);
+    const Vector3D v_cross = vector3dCross(v0, v1);
+    print_vec3("vector3dCross(v0,v1)", v_cross);
+    const double v_dot = vector3dDot(v0, v1);
     std::cout << std::left << std::setw(label_width) << "vector3dDot(v0,v1)" << ": "
-              << std::fixed << std::setprecision(4) << vector3dDot(v0, v1) << "\n"
+              << std::fixed << std::setprecision(4) << v_dot << "\n"
               << std::defaultfloat;
 
     std::cout << "\n--- rpy / rot ---\n";
@@ -112,7 +120,7 @@ int main() {
               << std::setprecision(4) << axis.x() << "," << axis.y() << "," << axis.z()
               << ")\n";
 
-    auto rpy_res = axisAngleToRpy(axis, 1.5);
+    const Vector3D rpy_res = axisAngleToRpy(axis, 1.5);
     std::cout << std::left << std::setw(label_width) << "axisAngleToRpy(axis, 1.5)" << ": "
               << "(1.5°) -> "
               << std::fixed << std::setprecision(4)
@@ -122,7 +130,8 @@ int main() {
     const Eigen::Matrix3d r3 = rpyDegToRotationMatrix(12, -34, 56);
     std::cout << std::left << std::setw(label_width) << "rpyDeg <-> rotationMatrix check" << ": ";
     const Vector3D mid = rotationMatrixToRpyDeg(r3);
-    const bool ok = (r3 - rpyDegToRotationMatrix(mid[0], mid[1], mid[2])).norm() < 1e-9;
+    const Eigen::Matrix3d r3_back = rpyDegToRotationMatrix(mid[0], mid[1], mid[2]);
+    const bool ok = (r3 - r3_back).norm() < 1e-9;
     std::cout << (ok ? "ok" : "fail") << "\n";
 
     return EXIT_SUCCESS;

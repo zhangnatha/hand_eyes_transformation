@@ -52,21 +52,25 @@ def _run_demo() -> None:
     target_in_base_eih = m.pose3dMultiply(flange_in_base, target_in_flange)
     print(f"{'target_in_base[EIH]':<{label_width}}: {_six(target_in_base_eih)}")
 
-    pose_from_camera_to_target = target_in_camera
+    pose_from_camera_to_target = m.pose3dInverse(target_in_camera)
     pose_from_base_to_camera = camera_in_base
 
-    print("\n--- pose API (target_in_camera, camera_in_base) ---")
-    print(f"{'pose3dInverse(target_in_camera)':<{label_width}}: {_six(m.pose3dInverse(pose_from_camera_to_target))}")
-    print(f"{'pose3dDistance(target,camera)':<{label_width}}: {m.pose3dDistance(pose_from_camera_to_target, pose_from_base_to_camera):.4f}")
-    print(f"{'pose3dOffset(target,camera)':<{label_width}}: {_six(m.pose3dOffset(pose_from_camera_to_target, pose_from_base_to_camera))}")
+    print("\n--- pose API (pose3dInverse(target_in_camera), camera_in_base) ---")
+    print(f"{'pose3dInverse(target_in_camera)':<{label_width}}: {_six(pose_from_camera_to_target)}")
+    pose_distance = m.pose3dDistance(pose_from_camera_to_target, pose_from_base_to_camera)
+    print(f"{'pose3dDistance(target,camera)':<{label_width}}: {pose_distance:.4f}")
+    pose_offset = m.pose3dOffset(pose_from_camera_to_target, pose_from_base_to_camera)
+    print(f"{'pose3dOffset(target,camera)':<{label_width}}: {_six(pose_offset)}")
     angle_deg, rotation_axis = m.pose3dAngle(pose_from_camera_to_target, pose_from_base_to_camera)
 
     print(f"{'pose3dAngle(target,camera)':<{label_width}}: {angle_deg:.4f}° | {rotation_axis[0]:.4f},{rotation_axis[1]:.4f},{rotation_axis[2]:.4f}")
-    print(f"{'pose3dGetTrans(target)':<{label_width}}: {_three(m.pose3dGetTrans(pose_from_camera_to_target))}")
-    print(f"{'pose3dGetRpy(target)':<{label_width}}: {_three(m.pose3dGetRpy(pose_from_camera_to_target))}")
+    pose_trans = m.pose3dGetTrans(pose_from_camera_to_target)
+    print(f"{'pose3dGetTrans(target)':<{label_width}}: {_three(pose_trans)}")
+    pose_rpy = m.pose3dGetRpy(pose_from_camera_to_target)
+    print(f"{'pose3dGetRpy(target)':<{label_width}}: {_three(pose_rpy)}")
 
-    print("\n--- pose6dToHomogeneous(target_in_camera) ---")
-    print(f"{'Input target_in_camera':<{label_width}}: {_six(pose_from_camera_to_target)}")
+    print("\n--- pose6dToHomogeneous(pose_from_camera_to_target) ---")
+    print(f"{'Input pose_from_camera_to_target':<{label_width}}: {_six(pose_from_camera_to_target)}")
     t = m.pose6dToHomogeneous(pose_from_camera_to_target)
     for i in range(4):
         print("  ", "  ".join(f"{float(t[i, j]):14.8f}" for j in range(4)))
@@ -76,10 +80,14 @@ def _run_demo() -> None:
     v1 = [566.417, 55.603, -78.360]
     print(f"{'v0':<{label_width}}: {_three(v0)}")
     print(f"{'v1':<{label_width}}: {_three(v1)}")
-    print(f"{'vector3dNorm(v0)':<{label_width}}: {m.vector3dNorm(v0):.4f}")
-    print(f"{'vector3dNormalized(v0)':<{label_width}}: {_three(m.vector3dNormalized(v0))}")
-    print(f"{'vector3dCross(v0,v1)':<{label_width}}: {_three(m.vector3dCross(v0, v1))}")
-    print(f"{'vector3dDot(v0,v1)':<{label_width}}: {m.vector3dDot(v0, v1):.4f}")
+    v0_norm = m.vector3dNorm(v0)
+    print(f"{'vector3dNorm(v0)':<{label_width}}: {v0_norm:.4f}")
+    v0_normalized = m.vector3dNormalized(v0)
+    print(f"{'vector3dNormalized(v0)':<{label_width}}: {_three(v0_normalized)}")
+    v_cross = m.vector3dCross(v0, v1)
+    print(f"{'vector3dCross(v0,v1)':<{label_width}}: {_three(v_cross)}")
+    v_dot = m.vector3dDot(v0, v1)
+    print(f"{'vector3dDot(v0,v1)':<{label_width}}: {v_dot:.4f}")
 
     print("\n--- rpy / rot ---")
     rpy = [179.46, 4.58, 166.62]
@@ -98,7 +106,9 @@ def _run_demo() -> None:
     print(f"{'axisAngleToRpy(axis, 1.5)':<{label_width}}: (1.5°) -> {rpy_res[0]:.4f},{rpy_res[1]:.4f},{rpy_res[2]:.4f}")
 
     r3 = m.rpyDegToRotationMatrix(12.0, -34.0, 56.0)
-    ok = np.allclose(r3, m.rpyDegToRotationMatrix(*m.rotationMatrixToRpyDeg(r3)), atol=1e-9)
+    r3_rpy = m.rotationMatrixToRpyDeg(r3)
+    r3_back = m.rpyDegToRotationMatrix(*r3_rpy)
+    ok = np.allclose(r3, r3_back, atol=1e-9)
     print(f"{'rpyDeg <-> rotationMatrix check':<{label_width}}: {'ok' if ok else 'fail'}")
 
 def main() -> None:

@@ -360,7 +360,35 @@ def runVerification():
     """库的功能自检逻辑"""
     test_pose6d = [1.0, 2.0, 3.0, 10.0, 20.0, 30.0]
     identity_offset = pose3dOffset(test_pose6d, test_pose6d)
-    success = np.allclose(pose6dToHomogeneous(identity_offset), np.eye(4), atol=1e-6)
+    target_in_camera = [130.51, 27.86, 515.003, 179.46, 4.58, 166.62]
+    camera_in_base = [-687.029, -412.132, -406.297, -44.9606, -33.0434, -1.92313]
+    pose_from_camera_to_target = pose3dInverse(target_in_camera)
+    angle_deg, angle_axis = pose3dAngle(pose_from_camera_to_target, camera_in_base)
+
+    success = (
+        np.allclose(pose6dToHomogeneous(identity_offset), np.eye(4), atol=1e-6)
+        and np.allclose(
+            pose3dMultiply(camera_in_base, target_in_camera),
+            [-752.67996025603, -26.086257129854, -46.164016869742,
+             -140.62260326604, 45.461176322047, 169.31881115526],
+            atol=1e-6,
+        )
+        and np.allclose(
+            pose_from_camera_to_target,
+            [161.2591424676, -62.049862219797, 503.17236935082,
+             -179.46494335417, -4.580578917107, 166.62019497834],
+            atol=1e-6,
+        )
+        and abs(pose3dDistance(pose_from_camera_to_target, camera_in_base) - 1292.0080532378) < 1e-6
+        and np.allclose(
+            pose3dOffset(pose_from_camera_to_target, camera_in_base),
+            [669.24440277298, -527.83388281099, 970.97277569712,
+             134.55393243662, 37.638045454121, 168.28368473831],
+            atol=1e-6,
+        )
+        and abs(angle_deg - 141.0608215332) < 1e-5
+        and np.allclose(angle_axis, [-0.036956389427932, 0.93467909959497, 0.35356640968959], atol=1e-6)
+    )
     print(f"verification result: {'pass' if success else 'fail'}")
     return success
 
